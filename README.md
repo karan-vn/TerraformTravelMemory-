@@ -1,424 +1,551 @@
-# MERN Application Deployment using Terraform and Ansible
+# MERN Application Deployment on AWS using Terraform and Ansible
 
-## Overview
+## Project Overview
 
-This project demonstrates the deployment of a MERN (MongoDB, Express.js, React.js, Node.js) application on AWS using Infrastructure as Code and configuration management.
+This project is part of the Hero Vired DevOps assignment for deploying a MERN stack application on AWS using Infrastructure as Code and configuration management.
 
-The infrastructure is provisioned using **Terraform**, while **Ansible** is used to configure the EC2 instances, install required software, configure MongoDB, and deploy the MERN application.
+The project uses:
 
-The MERN application used for this assignment is:
+- Terraform for AWS infrastructure provisioning
+- Ansible for server configuration and application deployment
+- AWS EC2 for compute
+- AWS VPC for network isolation
+- MongoDB for the database
+- Node.js and Express.js for the backend
+- React.js for the frontend
 
-**TravelMemory**  
+The MERN application used for this assignment is TravelMemory.
+
+Application Repository:
+
 https://github.com/UnpredictablePrashant/TravelMemory
 
 ---
 
-## Objectives
+## Assignment Objective
 
-The main objectives of this project are:
+The objective of this project is to gain practical experience in deploying a MERN stack application on AWS using:
 
-- Provision AWS infrastructure using Terraform.
-- Create a VPC with public and private subnets.
-- Configure Internet Gateway and NAT Gateway.
-- Provision separate EC2 instances for the web and database servers.
-- Configure AWS Security Groups and IAM roles.
-- Configure EC2 instances using Ansible.
-- Install Node.js and NPM on the web server.
-- Install and configure MongoDB on the database server.
-- Deploy the TravelMemory MERN application.
-- Configure communication between the React frontend, Express backend, and MongoDB.
-- Apply basic security hardening.
-- Document the deployment and verify the working application.
+1. Terraform for infrastructure automation
+2. Ansible for configuration management
+3. AWS networking and security
+4. EC2-based application hosting
+5. MongoDB database deployment
+6. Secure communication between application components
 
 ---
 
-# Architecture
+## Architecture
 
-The deployment uses a two-tier architecture on AWS.
+The planned AWS architecture consists of a VPC with separate public and private subnets.
 
+Internet
+  |
+  v
+Internet Gateway
+  |
+  v
+Public Subnet
+  |
+  +-- Web EC2 Instance
+      - React Frontend
+      - Node.js
+      - Express Backend
+  |
+  v
+Private Network
+  |
+  +-- Private Subnet
+      - Database EC2 Instance
+      - MongoDB
 
-```text
-                           Internet
-                              |
-                              |
-                    +---------v---------+
-                    |  Internet Gateway |
-                    +---------+---------+
-                              |
-                     Public Route Table
-                              |
-                    +---------v---------+
-                    |   Public Subnet   |
-                    |                   |
-                    |  Web EC2 Instance |
-                    |                   |
-                    | Node.js / Express |
-                    | React Frontend    |
-                    +---------+---------+
-                              |
-                              |
-                       Private Network
-                              |
-                    +---------v---------+
-                    |  Private Subnet   |
-                    |                   |
-                    | Database EC2      |
-                    |                   |
-                    |    MongoDB        |
-                    +-------------------+
+The private subnet uses a NAT Gateway for outbound internet access when required.
 
-                              ^
-                              |
-                       NAT Gateway
+The MongoDB server is not intended to be directly accessible from the public internet.
 
 ---
-```
-Project Structure
-
-```
-Terraform Assignment/
-│
-├── terraform/
-│   ├── main.tf
-│   ├── variables.tf
-│   ├── outputs.tf
-│   ├── providers.tf
-│   └── ...
-│
-├── ansible/
-│   ├── inventory/
-│   ├── playbooks/
-│   │   ├── webserver.yml
-│   │   ├── mongodb.yml
-│   │   └── deploy.yml
-│   ├── group_vars/
-│   └── ...
-│
-├── docs/
-│   ├── architecture.md
-│   └── screenshots/
-│
-├── .gitignore
-└── README.md
-
-```
-## Prerequisites
-
-The following tools are required:
-
-* AWS Account
-* AWS CLI
-* Terraform
-* Ansible
-* Git
-* SSH
-* WSL2 / Linux environment
-* An SSH key pair for EC2 access
 
 ## AWS Infrastructure
 
-Terraform is used to provision the AWS infrastructure required by the application.
+Terraform is used to provision the AWS infrastructure required for the application.
 
-#VPC
+### VPC
 
-A dedicated VPC is created for the application deployment.
+A dedicated VPC will be created for the application deployment.
 
 The VPC contains:
 
-* One public subnet
-* One private subnet
-* Internet Gateway
-* NAT Gateway
-* Public route table
-* Private route table
+- Public subnet
+- Private subnet
+- Internet Gateway
+- NAT Gateway
+- Public route table
+- Private route table
 
-# Public Subnet
-The public subnet contains the web server EC2 instance.
+### Public Subnet
 
-The web server requires internet connectivity so that the application can be accessed externally.
+The public subnet hosts the web/application EC2 instance.
 
-# Private Subnet
+The web server provides the externally accessible application components.
 
-The private subnet contains the database EC2 instance.
+### Private Subnet
 
-The database server is not directly exposed to the public internet.
+The private subnet hosts the database EC2 instance.
 
-Only the required application/web server traffic should be allowed to reach MongoDB.
+MongoDB is kept inside the private subnet to reduce direct exposure to the internet.
 
-# NAT Gateway
+### NAT Gateway
 
-The NAT Gateway provides outbound internet connectivity to resources in the private subnet while preventing direct inbound internet access to the private instance
+The NAT Gateway provides outbound internet connectivity for resources in the private subnet without providing direct inbound internet access.
 
-# EC2 Instances
+---
 
-Two EC2 instances are provisioned.
+## EC2 Instances
 
-# Web Server
+Two EC2 instances are planned for the deployment.
+
+### Web Server
 
 The web server is deployed in the public subnet.
 
-It hosts:
+It will host:
 
-* React frontend
-* Node.js
-* Express backend
+- React frontend
+- Node.js
+- Express backend
 
-# Database Server
+### Database Server
 
 The database server is deployed in the private subnet.
 
-It hosts:
+It will host:
 
-* MongoDB
+- MongoDB
 
-The database server should only accept MongoDB connections from the web/application server.
+The database server will only accept the required database traffic from the application server.
 
-# Security Groups
+---
 
-Separate security groups are used for the web and database servers.
+## Security
 
-# Web Server Security Group
+Security Groups will be configured separately for the web and database servers.
 
-The web server requires controlled access for:
+### Web Server Security Group
 
-* SSH
-* HTTP
-* Application traffic where required
+The web server will allow only the required inbound traffic.
 
-SSH access should be restricted to the administrator's public IP address.
+SSH access will be restricted to the administrator's public IP address.
 
-# Database Security Group
+Application HTTP/HTTPS traffic will be allowed as required by the deployment.
 
-MongoDB traffic should only be allowed from the web/application server.
+### Database Security Group
 
-MongoDB should not be exposed directly to the public internet.
+The database server will not be publicly exposed.
 
-# Terraform Deployment
+MongoDB traffic will be restricted to the web/application server.
 
-Navigate to the Terraform directory:
-```
-cd terraform
-```
+This prevents direct public access to the database.
+
+---
+
+## IAM
+
+IAM roles will be configured for the EC2 instances where required.
+
+The project follows the principle of granting only the permissions necessary for the deployed infrastructure.
+
+AWS credentials and other sensitive information will not be stored in the Git repository.
+
+---
+
+## Terraform
+
+Terraform is used to create and manage the AWS infrastructure.
+
+### Terraform responsibilities
+
+Terraform will provision:
+
+- AWS provider configuration
+- VPC
+- Public subnet
+- Private subnet
+- Internet Gateway
+- NAT Gateway
+- Route tables
+- Security Groups
+- EC2 instances
+- IAM resources
+- Terraform outputs
+
+### Terraform commands
+
 Initialize Terraform:
-```
-terraform init
-```
+
+`terraform init`
+
 Validate the configuration:
-```
-terraform validate
-```
+
+`terraform validate`
+
 Review the infrastructure plan:
-```
-terraform plan
-```
-Apply the infrastructure:
-```
-terraform apply
-```
-Confirm the deployment when prompted.
 
-To display Terraform outputs:
-```
-terraform output
-```
-The public IP address of the web server should be available through the Terraform output.
+`terraform plan`
 
-# Ansible Configuration
+Create the AWS infrastructure:
 
-Ansible is used to configure the EC2 instances after Terraform has provisioned them.
+`terraform apply`
 
-The Ansible inventory contains the web and database servers.
+Display Terraform outputs:
 
-Example:
+`terraform output`
 
-```
-[web]
-WEB_SERVER_IP
+Destroy the infrastructure when it is no longer required:
 
-[database]
-DATABASE_SERVER_PRIVATE_IP
-```
-The private IP address of the database server is used for communication between the application and MongoDB.
+`terraform destroy`
 
-# Web Server Configuration
+The `terraform destroy` command should only be used after collecting all required screenshots and assignment evidence.
 
-The Ansible playbook for the web server performs tasks such as:
+---
 
-1. Update required packages.
-2. Install Node.js.
-3. Install NPM.
-4. Clone the TravelMemory repository.
-5. Install application dependencies.
-6. Configure environment variables.
-7. Build/configure the React frontend.
-8. Start the Node.js/Express backend.
+## Ansible
 
-Example Ansible command:
-```
-ansible-playbook -i inventory/hosts.ini playbooks/webserver.yml
-```
+Ansible is used to configure the EC2 instances after they are provisioned by Terraform.
 
-# MongoDB Server Configuration
+### Ansible responsibilities
 
-The MongoDB server is configured using Ansible.
+Ansible will be used to:
 
-The configuration includes:
-1. Installing MongoDB.
-2. Starting and enabling the MongoDB service.
-3. Configuring MongoDB networking.
-4. Creating the required database.
-5. Creating the required database user.
-6. Enabling authentication where applicable.
-7. Restricting access through the AWS Security Group and server firewall.
+- Configure SSH connectivity
+- Configure the web server
+- Install Node.js
+- Install NPM
+- Clone the TravelMemory application
+- Install application dependencies
+- Configure application environment variables
+- Install MongoDB
+- Configure MongoDB
+- Create the required MongoDB database/user
+- Start and configure application services
+- Apply server-level security configuration
 
-Example:
-```
-ansible-playbook -i inventory/hosts.ini playbooks/mongodb.yml
-```
-# Application Configuration
+---
 
-The TravelMemory application consists of a React frontend and an Express/Node.js backend.
+## Web Server Configuration
 
-The application uses environment variables to establish communication between the components.
+The web server will be configured using Ansible.
 
-Conceptually:
+The configuration process includes:
 
-```
+1. Updating the operating system packages
+2. Installing Node.js
+3. Installing NPM
+4. Cloning the TravelMemory repository
+5. Installing backend dependencies
+6. Installing frontend dependencies
+7. Configuring application environment variables
+8. Building/configuring the React frontend
+9. Starting the Node.js/Express application
+
+---
+
+## Database Server Configuration
+
+The database server will be configured using Ansible.
+
+The configuration process includes:
+
+1. Installing MongoDB
+2. Starting the MongoDB service
+3. Enabling MongoDB to start automatically
+4. Configuring MongoDB networking
+5. Creating the required database
+6. Creating the required database user
+7. Configuring authentication where required
+8. Restricting access to the application server
+
+---
+
+## Application Flow
+
+The application follows this communication flow:
+
 React Frontend
       |
       | HTTP API Requests
       v
-Express / Node.js Backend
+Node.js / Express Backend
       |
       | MongoDB Connection
       v
-MongoDB
+MongoDB Database
 
-```
+The React frontend communicates with the Express backend through the configured backend URL.
 
-The backend connects to MongoDB using the MongoDB connection string.
+The Express backend communicates with MongoDB using the configured MongoDB connection string.
 
-The frontend is configured with the backend API URL.
+---
 
-Sensitive credentials should not be committed to Git.
+## Environment Variables
 
-Environment Variables
+Environment-specific values will be configured on the servers and will not be committed to Git.
 
-Environment-specific configuration should be stored outside the Git repository.
+Typical backend configuration includes:
 
-Example backend configuration:
+MONGO_URI=<MongoDB connection string>
 
-MONGO_URI=<mongodb-connection-string>
-PORT=<application-port>
+PORT=<backend port>
 
-Example frontend configuration:
+Typical frontend configuration includes:
 
-REACT_APP_BACKEND_URL=<backend-url>
+REACT_APP_BACKEND_URL=<backend URL>
 
-Actual credentials and secrets must not be committed to GitHub.
+Actual credentials, passwords, private keys and other secrets must never be committed to this repository.
 
-Security Hardening
+---
 
-The deployment includes basic security measures such as:
+## Project Structure
 
-Restricting SSH access to the administrator's IP address.
-Keeping MongoDB in a private subnet.
-Restricting MongoDB access to the application server.
-Configuring EC2 Security Groups.
-Using SSH key-based authentication.
-Avoiding direct public access to the database.
-Avoiding hard-coded credentials in Terraform or Ansible files.
-Disabling unnecessary network access.
-Applying appropriate host firewall rules.
-Disabling root SSH login where appropriate.
-Verification
+The repository is organized around the infrastructure and configuration components of the deployment.
 
-After deployment, the following should be verified.
+Terraform files are maintained under the Terraform section of the project.
 
-Infrastructure
-terraform validate
-terraform plan
-terraform output
+Ansible playbooks and inventory files are maintained under the Ansible section.
 
-Verify in AWS that:
+Documentation and deployment evidence can be maintained under the documentation section.
 
-VPC exists.
-Public subnet exists.
-Private subnet exists.
-Internet Gateway is attached.
-NAT Gateway is available.
-Route tables are correctly configured.
-Both EC2 instances are running.
-Security Groups are correctly configured.
-Ansible
+A typical structure is:
 
-Test connectivity:
+TerraformTravelMemory-/
+|
++-- terraform/
+|   +-- providers.tf
+|   +-- main.tf
+|   +-- variables.tf
+|   +-- outputs.tf
+|   +-- ...
+|
++-- ansible/
+|   +-- inventory/
+|   +-- playbooks/
+|   +-- group_vars/
+|   +-- ...
+|
++-- docs/
+|   +-- screenshots/
+|   +-- architecture/
+|
++-- .gitignore
++-- README.md
 
-ansible all -i inventory/hosts.ini -m ping
+The exact structure may evolve during implementation.
 
-Expected result:
+---
 
-SUCCESS
-MongoDB
+## Deployment Workflow
 
-Verify that MongoDB is running:
+The deployment process follows these stages:
 
-sudo systemctl status mongod
-Application
+1. Configure AWS CLI
+2. Configure AWS authentication
+3. Initialize Terraform
+4. Create the VPC
+5. Create public and private subnets
+6. Configure Internet Gateway
+7. Configure NAT Gateway
+8. Configure route tables
+9. Configure Security Groups
+10. Provision EC2 instances
+11. Configure Terraform outputs
+12. Configure Ansible inventory
+13. Configure the MongoDB server
+14. Configure the web server
+15. Deploy the TravelMemory application
+16. Configure application environment variables
+17. Start the backend
+18. Configure the frontend
+19. Verify frontend-to-backend communication
+20. Verify backend-to-MongoDB communication
+21. Perform security checks
+22. Capture deployment evidence
+23. Document the implementation
+
+---
+
+## Verification and Testing
+
+The deployment will be verified at multiple levels.
+
+### Terraform Verification
+
+Run:
+
+`terraform validate`
+
+`terraform plan`
+
+`terraform output`
+
+Verify that the expected AWS resources have been created.
+
+### Ansible Verification
+
+Test Ansible connectivity using:
+
+`ansible all -i inventory/hosts.ini -m ping`
+
+### Web Server Verification
+
+Verify:
+
+- Node.js installation
+- NPM installation
+- Application dependencies
+- Backend service
+- Frontend deployment
+
+### MongoDB Verification
+
+Verify that MongoDB is:
+
+- Installed
+- Running
+- Enabled
+- Accessible from the application server
+- Not publicly accessible
+
+### Application Verification
 
 Verify that:
 
-The backend is running.
-The frontend is accessible.
-The frontend can communicate with the backend.
-The backend can communicate with MongoDB.
-Application functionality works as expected.
+- The React frontend loads successfully
+- The frontend can communicate with the backend
+- The backend can communicate with MongoDB
+- Application functionality works correctly
 
-## Deployment Flow
+---
 
-The complete deployment process is:
+## Security Hardening
 
-```
-1. Configure AWS
-       |
-       v
-2. Terraform Initialization
-       |
-       v
-3. Create VPC and Networking
-       |
-       v
-4. Create Security Groups
-       |
-       v
-5. Provision EC2 Instances
-       |
-       v
-6. Obtain EC2 IP Addresses
-       |
-       v
-7. Configure Ansible Inventory
-       |
-       v
-8. Configure MongoDB Server
-       |
-       v
-9. Configure Web Server
-       |
-       v
-10. Deploy TravelMemory
-       |
-       v
-11. Configure Application Variables
-       |
-       v
-12. Test Frontend → Backend → MongoDB
-       |
-       v
-13. Security Verification
-       |
-       v
-14. Documentation and Screenshots
+The deployment includes the following security considerations:
 
-```
+- Restrict SSH access to the administrator's IP address
+- Keep MongoDB inside the private subnet
+- Do not expose MongoDB directly to the internet
+- Restrict MongoDB access using Security Groups
+- Use SSH key-based authentication
+- Avoid storing credentials in Git
+- Avoid committing `.env` files
+- Avoid committing private SSH keys
+- Configure host-level firewall rules where appropriate
+- Disable unnecessary services and ports
+- Disable root SSH login where appropriate
 
+---
+
+## Git Security
+
+The repository must not contain:
+
+- AWS access keys
+- AWS secret keys
+- SSH private keys
+- MongoDB passwords
+- Application secrets
+- `.env` files
+- Terraform state files containing sensitive information
+
+Sensitive files should be excluded through `.gitignore`.
+
+---
+
+## Screenshots and Evidence
+
+The assignment requires documentation and evidence of the working deployment.
+
+The following evidence will be collected:
+
+- Terraform initialization
+- Terraform validation
+- Terraform plan
+- Terraform apply
+- AWS VPC
+- Public subnet
+- Private subnet
+- Internet Gateway
+- NAT Gateway
+- Route tables
+- Security Groups
+- EC2 instances
+- Ansible execution
+- MongoDB configuration
+- Node.js configuration
+- Running backend
+- Running frontend
+- Working MERN application
+- Application communication with MongoDB
+
+Screenshots will be stored in the project documentation directory where applicable.
+
+---
+
+## Deliverables
+
+The completed assignment will contain:
+
+- Terraform scripts for AWS infrastructure
+- Ansible playbooks for configuration and deployment
+- AWS infrastructure configuration
+- MERN application deployment
+- Security configuration
+- Implementation documentation
+- Screenshots/video demonstrating the working application
+- GitHub repository containing the complete assignment
+
+---
+
+## Technologies Used
+
+| Technology | Purpose |
+|---|---|
+| AWS | Cloud infrastructure |
+| Terraform | Infrastructure as Code |
+| Ansible | Configuration management |
+| EC2 | Application and database servers |
+| VPC | Network isolation |
+| Internet Gateway | Internet connectivity |
+| NAT Gateway | Private subnet outbound connectivity |
+| Security Groups | Network access control |
+| IAM | AWS permissions |
+| MongoDB | Database |
+| Express.js | Backend framework |
+| React.js | Frontend framework |
+| Node.js | JavaScript runtime |
+| Git/GitHub | Source code management |
+| WSL2 | Linux development environment |
+
+---
+
+## Repository
+
+GitHub Repository:
+
+https://github.com/karan-vn/TerraformTravelMemory-
+
+---
+
+## Application Repository
+
+TravelMemory:
+
+https://github.com/UnpredictablePrashant/TravelMemory
+
+---
+
+## Author
+
+**Karan Kumar**
+
+Hero Vired DevOps Assignment
+
+MERN Application Deployment using Terraform and Ansible
