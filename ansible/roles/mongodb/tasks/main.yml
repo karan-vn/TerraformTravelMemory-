@@ -1,0 +1,140 @@
+---
+- name: Download the MongoDB 7.0 signing key
+  ansible.builtin.get_url:
+    url: https://pgp.mongodb.com/server-7.0.asc
+    dest: /tmp/mongodb-server-7.0.asc
+    mode: "0644"
+
+- name: Install the MongoDB signing key
+  ansible.builtin.command:
+    cmd: gpg --dearmor --yes --output /usr/share/keyrings/mongodb-server-7.0.gpg /tmp/mongodb-server-7.0.asc
+  args:
+    creates: /usr/share/keyrings/mongodb-server-7.0.gpg
+
+- name: Configure the MongoDB apt repository
+  ansible.builtin.template:
+    src: mongodb-org-7.0.list.j2
+    dest: /etc/apt/sources.list.d/mongodb-org-7.0.list
+    owner: root
+    group: root
+    mode: "0644"
+  register: mongodb_repository
+
+- name: Update apt after adding the MongoDB repository
+  ansible.builtin.apt:
+    update_cache: true
+  when: mongodb_repository.changed
+
+- name: Install MongoDB
+  ansible.builtin.apt:
+    name: mongodb-org
+    state: present
+
+- name: Start MongoDB for first-time user creation
+  ansible.builtin.service:
+    name: mongod
+    state: started
+    enabled: true
+
+- name: Check whether the MongoDB administrator already authenticates
+  ansible.builtin.command:
+    argv:
+      - mongosh
+      - --quiet
+      - --host
+      - 127.0.0.1
+      - --username
+      - "{{ vault_mongodb_admin_username }}"
+      - --password
+      - "{{ vault_mongodb_admin_password }}"
+      - --authenticationDatabase
+      - admin
+      - --eval
+      - db.runCommand({ ping: 1 }).ok
+  register: mongodb_admin_check
+  changed_when: false
+  failed_when: false
+  no_log: true
+
+- name: Create the MongoDB administrator
+  ansible.builtin.command:
+    argv:
+      - mongosh
+      - --quiet
+      - --host
+      - 127.0.0.1
+      - admin
+      - --eval
+      - "db.createUser({user: '{{ vault_mongodb_admin_username }}', pwd: '{{ vault_mongodb_admin_password }}', roles: [{role: 'userAdminAnyDatabase', db: 'admin'}, {role: 'readWriteAnyDatabase', db: 'admin'}]})"
+  when: mongodb_admin_check.rc != 0
+  no_log: true
+
+- name: Create or update the application database user
+  ansible.builtin.command:
+    argv:
+      - mongosh
+      - --quiet
+      - --host
+      - 127.0.0.1
+      - --username
+      - "{{ vault_mongodb_admin_username }}"
+      - --password
+      - "{{ vault_mongodb_admin_password }}"
+      - --authenticationDatabase
+      - admin
+      - "{{ mongodb_database }}"
+      - --eval
+      - "db.updateUser('{{ vault_mongodb_app_username }}', {pwd: '{{ vault_mongodb_app_password }}', roles: [{role: 'readWrite', db: '{{ mongodb_database }}'}]})"
+  register: mongodb_app_user_update
+  changed_when: false
+  failed_when: false
+  no_log: true
+
+- name: Create the application database user when absent
+  ansible.builtin.command:
+    argv:
+      - mongosh
+      - --quiet
+      - --host
+      - 127.0.0.1
+      - --username
+      - "{{ vault_mongodb_admin_username }}"
+      - --password
+      - "{{ vault_mongodb_admin_password }}"
+      - --authenticationDatabase
+      - admin
+      - "{{ mongodb_database }}"
+      - --eval
+      - "db.createUser({user: '{{ vault_mongodb_app_username }}', pwd: '{{ vault_mongodb_app_password }}', roles: [{role: 'readWrite', db: '{{ mongodb_database }}'}]})"
+  when: mongodb_app_user_update.rc != 0
+  no_log: true
+
+- name: Enable authorization and private binding
+  ansible.builtin.template:
+    src: mongod.conf.j2
+    dest: /etc/mongod.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart MongoDB
+
+- name: Apply MongoDB configuration before application deployment
+  ansible.builtin.meta: flush_handlers
+
+- name: Verify authenticated MongoDB access
+  ansible.builtin.command:
+    argv:
+      - mongosh
+      - --quiet
+      - --host
+      - 127.0.0.1
+      - --username
+      - "{{ vault_mongodb_app_username }}"
+      - --password
+      - "{{ vault_mongodb_app_password }}"
+      - --authenticationDatabase
+      - "{{ mongodb_database }}"
+      - --eval
+      - db.runCommand({ ping: 1 }).ok
+  changed_when: false
+  no_log: true

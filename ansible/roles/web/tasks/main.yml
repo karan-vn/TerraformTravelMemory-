@@ -1,0 +1,186 @@
+---
+- name: Install Node.js repository prerequisites
+  ansible.builtin.apt:
+    name:
+      - nginx
+      - rsync
+    state: present
+
+- name: Install Node.js 20 repository
+  ansible.builtin.shell: |
+    set -o pipefail
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+  args:
+    executable: /bin/bash
+    creates: /etc/apt/sources.list.d/nodesource.list
+
+- name: Install Node.js 20
+  ansible.builtin.apt:
+    name: nodejs
+    state: present
+    update_cache: true
+
+- name: Install PM2 globally
+  community.general.npm:
+    name: pm2
+    global: true
+    state: present
+
+- name: Create the deployment directory
+  ansible.builtin.file:
+    path: "{{ deployment_root }}"
+    state: directory
+    owner: "{{ deployment_user }}"
+    group: "{{ deployment_user }}"
+    mode: "0755"
+
+- name: Copy backend source
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../backend/"
+    dest: "{{ deployment_root }}/backend/"
+    owner: "{{ deployment_user }}"
+    group: "{{ deployment_user }}"
+    mode: preserve
+  notify: Reload backend
+  register: backend_source
+
+- name: Copy frontend source
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../frontend/"
+    dest: "{{ deployment_root }}/frontend/"
+    owner: "{{ deployment_user }}"
+    group: "{{ deployment_user }}"
+    mode: preserve
+  register: frontend_source
+
+- name: Write the protected backend environment file
+  ansible.builtin.template:
+    src: backend.env.j2
+    dest: "{{ deployment_root }}/backend/.env"
+    owner: "{{ deployment_user }}"
+    group: "{{ deployment_user }}"
+    mode: "0600"
+  no_log: true
+  notify: Reload backend
+
+- name: Write the production frontend environment file
+  ansible.builtin.template:
+    src: frontend.env.production.j2
+    dest: "{{ deployment_root }}/frontend/.env.production"
+    owner: "{{ deployment_user }}"
+    group: "{{ deployment_user }}"
+    mode: "0644"
+  register: frontend_environment
+
+- name: Check the installed backend dependency lock
+  ansible.builtin.command: sha256sum --check .package-lock.sha256
+  args:
+    chdir: "{{ deployment_root }}/backend"
+  become_user: "{{ deployment_user }}"
+  register: backend_lock_check
+  changed_when: false
+  failed_when: false
+
+- name: Install backend dependencies with npm ci
+  ansible.builtin.shell: npm ci --omit=dev && sha256sum package-lock.json > .package-lock.sha256
+  args:
+    chdir: "{{ deployment_root }}/backend"
+  become_user: "{{ deployment_user }}"
+  when: backend_lock_check.rc != 0
+  register: backend_dependencies
+  changed_when: true
+  notify: Reload backend
+
+- name: Check the installed frontend dependency lock
+  ansible.builtin.command: sha256sum --check .package-lock.sha256
+  args:
+    chdir: "{{ deployment_root }}/frontend"
+  become_user: "{{ deployment_user }}"
+  register: frontend_lock_check
+  changed_when: false
+  failed_when: false
+
+- name: Install frontend dependencies with npm ci
+  ansible.builtin.shell: npm ci && sha256sum package-lock.json > .package-lock.sha256
+  args:
+    chdir: "{{ deployment_root }}/frontend"
+  become_user: "{{ deployment_user }}"
+  when: frontend_lock_check.rc != 0
+  register: frontend_dependencies
+  changed_when: true
+
+- name: Check whether the React build exists
+  ansible.builtin.stat:
+    path: "{{ deployment_root }}/frontend/build/index.html"
+  register: frontend_build
+
+- name: Build the React frontend
+  ansible.builtin.command: npm run build
+  args:
+    chdir: "{{ deployment_root }}/frontend"
+  become_user: "{{ deployment_user }}"
+  changed_when: true
+  when: frontend_source.changed or frontend_environment.changed or frontend_dependencies.changed or not frontend_build.stat.exists
+
+- name: Install the PM2 application definition
+  ansible.builtin.template:
+    src: ecosystem.config.js.j2
+    dest: "{{ deployment_root }}/ecosystem.config.js"
+    owner: "{{ deployment_user }}"
+    group: "{{ deployment_user }}"
+    mode: "0644"
+  notify: Reload backend
+
+- name: Start the backend with PM2
+  ansible.builtin.command: pm2 startOrReload ecosystem.config.js
+  args:
+    chdir: "{{ deployment_root }}"
+  become_user: "{{ deployment_user }}"
+  changed_when: false
+
+- name: Save the PM2 process list
+  ansible.builtin.command: pm2 save
+  become_user: "{{ deployment_user }}"
+  changed_when: false
+
+- name: Configure PM2 startup service
+  ansible.builtin.command: pm2 startup systemd -u {{ deployment_user }} --hp /home/{{ deployment_user }}
+  args:
+    creates: /etc/systemd/system/pm2-{{ deployment_user }}.service
+
+- name: Install the Nginx site
+  ansible.builtin.template:
+    src: travelmemory.conf.j2
+    dest: /etc/nginx/sites-available/travelmemory
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload Nginx
+
+- name: Enable the Nginx site
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/travelmemory
+    dest: /etc/nginx/sites-enabled/travelmemory
+    state: link
+  notify: Reload Nginx
+
+- name: Disable the default Nginx site
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: Reload Nginx
+
+- name: Validate the Nginx configuration
+  ansible.builtin.command: nginx -t
+  changed_when: false
+
+- name: Apply web service changes
+  ansible.builtin.meta: flush_handlers
+
+- name: Verify the backend through Nginx
+  ansible.builtin.uri:
+    url: http://127.0.0.1/hello
+    return_content: true
+    status_code: 200
+  register: backend_health
+  failed_when: "'Hello World!' not in backend_health.content"

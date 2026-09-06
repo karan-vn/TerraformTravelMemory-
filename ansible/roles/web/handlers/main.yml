@@ -1,0 +1,12 @@
+---
+- name: Reload backend
+  ansible.builtin.command: pm2 startOrReload ecosystem.config.js
+  args:
+    chdir: "{{ deployment_root }}"
+  become_user: "{{ deployment_user }}"
+
+- name: Reload Nginx
+  ansible.builtin.service:
+    name: nginx
+    state: reloaded
+    enabled: true

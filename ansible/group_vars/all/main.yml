@@ -1,0 +1,11 @@
+---
+project_name: travelmemory-aws-iac
+deployment_user: ubuntu
+deployment_root: /opt/travelmemory
+backend_port: 3001
+mongodb_port: 27017
+mongodb_database: travelmemory
+
+# Encrypted values are loaded from vault.yml:
+# vault_mongodb_admin_username, vault_mongodb_admin_password,
+# vault_mongodb_app_username, vault_mongodb_app_password

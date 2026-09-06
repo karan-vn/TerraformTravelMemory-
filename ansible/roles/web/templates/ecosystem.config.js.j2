@@ -1,0 +1,8 @@
+module.exports = {
+  apps: [{
+    name: 'travelmemory-backend',
+    cwd: '{{ deployment_root }}/backend',
+    script: 'index.js',
+    env: { NODE_ENV: 'production' }
+  }]
+};
