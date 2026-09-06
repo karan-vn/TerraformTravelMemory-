@@ -115,29 +115,29 @@ The following tools are required:
 * WSL2 / Linux environment
 * An SSH key pair for EC2 access
 
-# AWS Infrastructure
+## AWS Infrastructure
 
 Terraform is used to provision the AWS infrastructure required by the application.
 
-VPC
+#VPC
 
 A dedicated VPC is created for the application deployment.
 
 The VPC contains:
 
-One public subnet
-One private subnet
-Internet Gateway
-NAT Gateway
-Public route table
-Private route table
-Public Subnet
+* One public subnet
+* One private subnet
+* Internet Gateway
+* NAT Gateway
+* Public route table
+* Private route table
 
+# Public Subnet
 The public subnet contains the web server EC2 instance.
 
 The web server requires internet connectivity so that the application can be accessed externally.
 
-Private Subnet
+# Private Subnet
 
 The private subnet contains the database EC2 instance.
 
@@ -145,83 +145,85 @@ The database server is not directly exposed to the public internet.
 
 Only the required application/web server traffic should be allowed to reach MongoDB.
 
-NAT Gateway
+# NAT Gateway
 
 The NAT Gateway provides outbound internet connectivity to resources in the private subnet while preventing direct inbound internet access to the private instance
 
-EC2 Instances
+# EC2 Instances
 
 Two EC2 instances are provisioned.
 
-Web Server
+# Web Server
 
 The web server is deployed in the public subnet.
 
 It hosts:
 
-React frontend
-Node.js
-Express backend
-Database Server
+* React frontend
+* Node.js
+* Express backend
+
+# Database Server
 
 The database server is deployed in the private subnet.
 
 It hosts:
 
-MongoDB
+* MongoDB
 
 The database server should only accept MongoDB connections from the web/application server.
-Security Groups
+
+# Security Groups
 
 Separate security groups are used for the web and database servers.
 
-Web Server Security Group
+# Web Server Security Group
 
 The web server requires controlled access for:
 
-SSH
-HTTP
-Application traffic where required
+* SSH
+* HTTP
+* Application traffic where required
 
 SSH access should be restricted to the administrator's public IP address.
 
-Database Security Group
+# Database Security Group
 
 MongoDB traffic should only be allowed from the web/application server.
 
 MongoDB should not be exposed directly to the public internet.
 
-Terraform Deployment
+# Terraform Deployment
 
 Navigate to the Terraform directory:
-
+```
 cd terraform
-
+```
 Initialize Terraform:
-
+```
 terraform init
-
+```
 Validate the configuration:
-
+```
 terraform validate
-
+```
 Review the infrastructure plan:
-
+```
 terraform plan
-
+```
 Apply the infrastructure:
-
+```
 terraform apply
-
+```
 Confirm the deployment when prompted.
 
 To display Terraform outputs:
-
+```
 terraform output
-
+```
 The public IP address of the web server should be available through the Terraform output.
 
-Ansible Configuration
+# Ansible Configuration
 
 Ansible is used to configure the EC2 instances after Terraform has provisioned them.
 
@@ -229,48 +231,51 @@ The Ansible inventory contains the web and database servers.
 
 Example:
 
+```
 [web]
 WEB_SERVER_IP
 
 [database]
 DATABASE_SERVER_PRIVATE_IP
-
+```
 The private IP address of the database server is used for communication between the application and MongoDB.
 
-Web Server Configuration
+# Web Server Configuration
 
 The Ansible playbook for the web server performs tasks such as:
 
-Update required packages.
-Install Node.js.
-Install NPM.
-Clone the TravelMemory repository.
-Install application dependencies.
-Configure environment variables.
-Build/configure the React frontend.
-Start the Node.js/Express backend.
+1. Update required packages.
+2. Install Node.js.
+3. Install NPM.
+4. Clone the TravelMemory repository.
+5. Install application dependencies.
+6. Configure environment variables.
+7. Build/configure the React frontend.
+8. Start the Node.js/Express backend.
 
 Example Ansible command:
-
+```
 ansible-playbook -i inventory/hosts.ini playbooks/webserver.yml
-MongoDB Server Configuration
+```
+
+# MongoDB Server Configuration
 
 The MongoDB server is configured using Ansible.
 
 The configuration includes:
-
-Installing MongoDB.
-Starting and enabling the MongoDB service.
-Configuring MongoDB networking.
-Creating the required database.
-Creating the required database user.
-Enabling authentication where applicable.
-Restricting access through the AWS Security Group and server firewall.
+1. Installing MongoDB.
+2. Starting and enabling the MongoDB service.
+3. Configuring MongoDB networking.
+4. Creating the required database.
+5. Creating the required database user.
+6. Enabling authentication where applicable.
+7. Restricting access through the AWS Security Group and server firewall.
 
 Example:
-
+```
 ansible-playbook -i inventory/hosts.ini playbooks/mongodb.yml
-Application Configuration
+```
+# Application Configuration
 
 The TravelMemory application consists of a React frontend and an Express/Node.js backend.
 
