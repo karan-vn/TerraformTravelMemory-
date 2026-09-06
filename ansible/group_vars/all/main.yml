@@ -1,5 +1,5 @@
 ---
-project_name: travelmemory-aws-iac
+project_name: terraformtravelmemory
 deployment_user: ubuntu
 deployment_root: /opt/travelmemory
 backend_port: 3001
