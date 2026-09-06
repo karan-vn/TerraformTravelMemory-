@@ -36,6 +36,7 @@ The main objectives of this project are:
 
 The deployment uses a two-tier architecture on AWS.
 
+
 ```text
                            Internet
                               |
@@ -98,21 +99,21 @@ Terraform Assignment/
 ├── .gitignore
 └── README.md
 
-
-Prerequisites
+```
+## Prerequisites
 
 The following tools are required:
 
-AWS Account
-AWS CLI
-Terraform
-Ansible
-Git
-SSH
-WSL2 / Linux environment
-An SSH key pair for EC2 access
+* AWS Account
+* AWS CLI
+* Terraform
+* Ansible
+* Git
+* SSH
+* WSL2 / Linux environment
+* An SSH key pair for EC2 access
 
-AWS Infrastructure
+# AWS Infrastructure
 
 Terraform is used to provision the AWS infrastructure required by the application.
 
@@ -275,6 +276,7 @@ The application uses environment variables to establish communication between th
 
 Conceptually:
 
+```
 React Frontend
       |
       | HTTP API Requests
@@ -284,6 +286,8 @@ Express / Node.js Backend
       | MongoDB Connection
       v
 MongoDB
+
+```
 
 The backend connects to MongoDB using the MongoDB connection string.
 
@@ -367,6 +371,7 @@ Application functionality works as expected.
 
 The complete deployment process is:
 
+```
 1. Configure AWS
        |
        v
@@ -407,3 +412,6 @@ The complete deployment process is:
        |
        v
 14. Documentation and Screenshots
+
+```
+
