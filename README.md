@@ -72,8 +72,10 @@ The deployment uses a two-tier architecture on AWS.
                        NAT Gateway
 
 ---
-
+```
 Project Structure
+
+```
 Terraform Assignment/
 │
 ├── terraform/
