@@ -541,11 +541,24 @@ TravelMemory:
 https://github.com/UnpredictablePrashant/TravelMemory
 
 ---
+## SCreen Shots
 
-## Author
+<img width="635" height="231" alt="Screenshot 2026-09-06 233312" src="https://github.com/user-attachments/assets/25f86325-fa0b-4194-8cff-0032633a387a" />
 
-**Karan Kumar**
+<img width="1290" height="913" alt="Terraform Plan" src="https://github.com/user-attachments/assets/d6aef872-3f67-4594-9296-84faae8f5608" />
 
-Hero Vired DevOps Assignment
+<img width="618" height="164" alt="Screenshot 2026-09-06 233427" src="https://github.com/user-attachments/assets/1137e46b-a780-45c7-915a-a925b1276c7e" />
 
-MERN Application Deployment using Terraform and Ansible
+<img width="1651" height="857" alt="VPC Resourve Map" src="https://github.com/user-attachments/assets/78aea856-d200-4f5a-a83d-93db9a8274a5" />
+
+<img width="2313" height="248" alt="EC2 Instances" src="https://github.com/user-attachments/assets/15d538fa-a98b-4131-a06c-4f1c08599aa7" />
+
+<img width="683" height="179" alt="Screenshot 2026-09-06 233635" src="https://github.com/user-attachments/assets/5ac5dd12-6820-4075-9841-d68ca67c651d" />
+
+<img width="590" height="161" alt="Screenshot 2026-09-06 233734" src="https://github.com/user-attachments/assets/59c04c2b-f5b3-4efe-9660-72207f93bcd9" />
+
+<img width="2848" height="1494" alt="IAM Instance" src="https://github.com/user-attachments/assets/8d5a2465-50ba-425a-bde2-45488ca117e9" />
+
+<img width="940" height="484" alt="Application" src="https://github.com/user-attachments/assets/63cbe201-f311-48a9-b627-ca0b36dbd6d6" />
+
+
